@@ -12,7 +12,7 @@ alias ElixirALE.GPIO
     GPIO.set_int(echo_pid, :both)
     IO.puts("\tSetting TRIG Low")
     GPIO.write(trigger_pid, 0)
-    {:ok, :idle, [trigger_pid, echo_pid], {:state_timeout, 1000, :make_measurement_timeout}}
+    {:ok, :idle, [trigger_pid, echo_pid], {:state_timeout, 10, :make_measurement_timeout}}
   end
   
   @doc """
@@ -47,7 +47,7 @@ alias ElixirALE.GPIO
   
   def start_measurement(:enter, _old_state, [trigger_pid, echo_pid]) do
     IO.puts("Entered the start_measurement state")
-    IO.puts("\tWaiting for falling edge interrupt on ECHO")
+    IO.puts("\tWaiting for rising edge interrupt on ECHO")
     :keep_state_and_data
   end
   
@@ -60,15 +60,16 @@ alias ElixirALE.GPIO
   
   def end_measurement(:enter, _old_state, [trigger_pid, echo_pid, start_time]) do
     IO.puts("Entered the end_measurement state")
-    IO.puts("\tWaiting for rising edge interrupt on ECHO")
+    IO.puts("\tWaiting for falling edge interrupt on ECHO")
     :keep_state_and_data
   end
 
   def end_measurement(:info, {:gpio_interrupt, echo_pin, :falling}, [trigger_pid, echo_pid, start_time]) do
     IO.puts("\tFalling Edge of Echo Detected")
     end_time = Timex.now()
+    IO.puts("\tStart Time: #{inspect(start_time)}")
     IO.puts("\tEnd Time: #{inspect(end_time)}")
-    echo_duration = Timex.diff(end_time, start_time, :milliseconds) / 1000
+    echo_duration = Timex.diff(end_time, start_time, :microseconds) / 1000000
     IO.puts("\tEcho Duration: #{inspect(echo_duration)}")
     distance_cm = echo_duration * 17150
     distance_in = distance_cm * 0.393701
